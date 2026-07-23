@@ -28,7 +28,8 @@ class WebhookDestination implements FormDestination
         $body = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $headers = ['Content-Type' => 'application/json'];
-        if ($secret = config('eloquent-forms.webhook.secret')) {
+        $secret = config('eloquent-forms.webhook.secret');
+        if ($secret) {
             $headers['X-Forms-Signature'] = hash_hmac('sha256', $body, $secret);
         }
 

@@ -79,18 +79,20 @@ class FormSubmission extends Model
      */
     public function fields(): array
     {
-        return collect($this->payload ?? [])
-            ->reject(fn ($value, $key) => str_starts_with((string) $key, '_'))
-            ->all();
+        return array_filter(
+            $this->payload ?? [],
+            fn ($key) => ! str_starts_with((string) $key, '_'),
+            ARRAY_FILTER_USE_KEY
+        );
     }
 
-    public function recordDelivery(string $destination, bool $ok, ?string $detail = null): void
+    public function recordDelivery(string $destination, bool $succeeded, ?string $detail = null): void
     {
         $log = $this->delivery_log ?? [];
         $log[$destination] = array_filter([
-            'ok' => $ok,
+            'ok' => $succeeded,
             'detail' => $detail,
-        ], fn ($v) => $v !== null);
+        ], fn ($value) => $value !== null);
 
         $this->delivery_log = $log;
         $this->save();
