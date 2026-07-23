@@ -12,13 +12,13 @@ class MailDestination implements FormDestination
 {
     public function deliver(FormSubmission $submission): void
     {
-        $to = optional($submission->form)->recipient_email
+        $recipient = optional($submission->form)->recipient_email
             ?? config('eloquent-forms.mail.to');
 
-        if (empty($to)) {
+        if (empty($recipient)) {
             throw new RuntimeException('No recipient configured for the mail destination.');
         }
 
-        Mail::to($to)->send(new FormSubmissionReceived($submission));
+        Mail::to($recipient)->send(new FormSubmissionReceived($submission));
     }
 }

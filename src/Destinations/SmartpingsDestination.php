@@ -18,7 +18,7 @@ class SmartpingsDestination implements FormDestination
     public function deliver(FormSubmission $submission): void
     {
         throw new RuntimeException(
-            'SmartPings destination is not implemented yet. Provide SMARTPINGS_CLIENT_ID and SMARTPINGS_SECRET_ID so it can be built on smartpings/php-sdk and tested.'
+            'SmartPings destination is not implemented yet. Set SMARTPINGS_CLIENT_ID and SMARTPINGS_SECRET_ID before enabling it.'
         );
     }
 }
