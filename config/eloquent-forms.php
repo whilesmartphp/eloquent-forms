@@ -10,6 +10,15 @@ return [
     'route_prefix' => env('FORMS_ROUTE_PREFIX', 'api'),
 
     /*
+    | Hosts permitted to submit, comma-separated. Empty allows any origin. A
+    | Form row may narrow this further via its `allowed_origins` column.
+    */
+    'allowed_origins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('FORMS_ALLOWED_ORIGINS', ''))
+    ))),
+
+    /*
     | Response envelope used by the package controllers. Swap for your own
     | implementation of ResponseFormatterInterface to change the shape.
     */
