@@ -4,6 +4,7 @@ namespace Whilesmart\Forms\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use Whilesmart\Forms\Challenges\ChallengeManager;
 use Whilesmart\Forms\Events\FormSubmittedEvent;
 use Whilesmart\Forms\Http\Requests\SubmitFormRequest;
 use Whilesmart\Forms\Jobs\ProcessFormSubmission;
@@ -30,7 +31,10 @@ class FormSubmissionController extends Controller
             return $this->failure('Origin not allowed.', 403);
         }
 
-        $payload = $request->except(['_started_at']);
+        $payload = $request->except(array_filter([
+            '_started_at',
+            app(ChallengeManager::class)->verifier()?->tokenField(),
+        ]));
 
         $submission = new FormSubmission([
             'form_id' => $form->id,

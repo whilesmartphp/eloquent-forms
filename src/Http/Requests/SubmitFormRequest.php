@@ -4,6 +4,7 @@ namespace Whilesmart\Forms\Http\Requests;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Whilesmart\Forms\Challenges\ChallengeManager;
 
 class SubmitFormRequest extends FormRequest
 {
@@ -51,6 +52,33 @@ class SubmitFormRequest extends FormRequest
             if (! $hasContent) {
                 $validator->errors()->add('form', 'The form is empty.');
             }
+
+            $this->verifyChallenge($validator);
         });
+    }
+
+    /**
+     * A configured challenge provider gets the last word. An unreachable
+     * provider throws out of here, answering 503 rather than 422.
+     */
+    private function verifyChallenge(Validator $validator): void
+    {
+        $verifier = app(ChallengeManager::class)->verifier();
+
+        if ($verifier === null) {
+            return;
+        }
+
+        $token = (string) $this->input($verifier->tokenField(), '');
+
+        if ($token === '') {
+            $validator->errors()->add('challenge', 'Please complete the verification challenge.');
+
+            return;
+        }
+
+        if (! $verifier->verify($token, $this->ip())) {
+            $validator->errors()->add('challenge', 'Verification failed. Please try again.');
+        }
     }
 }
