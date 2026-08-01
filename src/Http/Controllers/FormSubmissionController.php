@@ -18,7 +18,7 @@ class FormSubmissionController extends Controller
 {
     use ApiResponse;
 
-    public function store(SubmitFormRequest $request, string $key)
+    public function store(SubmitFormRequest $request, ChallengeManager $challenges, string $key)
     {
         $form = Form::firstOrCreate(
             ['key' => $key],
@@ -33,7 +33,7 @@ class FormSubmissionController extends Controller
             return $this->failure('Origin not allowed.', 403);
         }
 
-        $verifier = app(ChallengeManager::class)->verifier($form->challengeKey());
+        $verifier = $challenges->verifier($form->challengeKey());
 
         if ($verifier !== null) {
             $failure = $this->challengeFailure($request, $verifier);
