@@ -45,11 +45,29 @@ The frontend renders the widget with its own public site key and posts the
 resulting token as `cf_turnstile_response`. The token is verified server-side,
 then dropped rather than stored with the submission.
 
-A rejected token fails validation like any other field (422). A provider that
-cannot be reached answers 503 instead, so an outage at the provider reads as a
-retry rather than as an accusation.
+A rejected or missing token answers 422. A provider that cannot be reached
+answers 503 instead, so an outage at the provider reads as a retry rather than
+as an accusation.
 
 Leaving `FORMS_CHALLENGE` unset runs no challenge and makes no outbound call.
+
+### Forms a browser does not submit
+
+Only a browser can render the widget and produce a token, so a challenge set in
+config would otherwise lock out mobile and server-to-server clients posting to
+the same API. Set the `challenge` column on those forms to `none`:
+
+```php
+Form::create(['key' => 'mobile-intake', 'challenge' => Form::CHALLENGE_NONE]);
+```
+
+The column follows the same rule as `destinations` and `allowed_origins`: the
+form's own value wins, null inherits the config default. A form can also require
+a challenge the default does not, by naming one.
+
+Forms are created on first use, so a key that has never been submitted inherits
+the config default and is challenged. Create the row ahead of the first call for
+anything an API client submits.
 
 Add another provider by implementing
 `Whilesmart\Forms\Contracts\ChallengeVerifier` and registering it in

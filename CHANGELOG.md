@@ -3,6 +3,7 @@
 ## [0.2.0] - 2026-08-01
 - Optional human-verification challenge on public submissions, off unless configured
 - Cloudflare Turnstile ships as the first challenge provider; others plug in behind a challenge contract
+- The challenge is set per form as well as by default, so forms submitted by non-browser clients can opt out
 - A challenge provider that cannot be reached answers 503 rather than rejecting the submitter
 - The challenge token is verified and discarded instead of being stored with the submission
 - The origin allowlist is settable for every form through config, not only per form row

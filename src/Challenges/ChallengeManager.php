@@ -13,12 +13,11 @@ class ChallengeManager
     }
 
     /**
-     * The configured verifier, or null when no challenge is in use.
+     * Resolve a challenge key to its verifier. A blank key means the caller
+     * runs no challenge, so there is nothing to resolve.
      */
-    public function verifier(): ?ChallengeVerifier
+    public function verifier(?string $key): ?ChallengeVerifier
     {
-        $key = config('eloquent-forms.protection.challenge');
-
         if (blank($key)) {
             return null;
         }

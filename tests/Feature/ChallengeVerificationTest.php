@@ -4,6 +4,7 @@ namespace Whilesmart\Forms\Tests\Feature;
 
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
+use Whilesmart\Forms\Models\Form;
 use Whilesmart\Forms\Models\FormSubmission;
 use Whilesmart\Forms\Tests\TestCase;
 
@@ -131,5 +132,50 @@ class ChallengeVerificationTest extends TestCase
         ])->assertCreated();
 
         Http::assertNothingSent();
+    }
+
+    #[Test]
+    public function a_form_can_opt_out_of_the_configured_challenge(): void
+    {
+        Form::create(['key' => 'mobile-intake', 'challenge' => Form::CHALLENGE_NONE]);
+        Http::fake();
+
+        $this->postJson('/api/forms/mobile-intake/submissions', [
+            'message' => 'posted by a client that cannot render a widget',
+        ])->assertCreated();
+
+        Http::assertNothingSent();
+    }
+
+    #[Test]
+    public function opting_one_form_out_leaves_the_others_challenged(): void
+    {
+        Form::create(['key' => 'mobile-intake', 'challenge' => Form::CHALLENGE_NONE]);
+        Http::fake([self::VERIFY_URL => Http::response(self::ACCEPTED)]);
+
+        $this->postJson('/api/forms/mobile-intake/submissions', ['message' => 'no token'])
+            ->assertCreated();
+
+        $this->postJson('/api/forms/contact/submissions', ['message' => 'no token'])
+            ->assertStatus(422);
+    }
+
+    #[Test]
+    public function a_form_can_require_a_challenge_the_default_does_not(): void
+    {
+        config()->set('eloquent-forms.protection.challenge', null);
+        Form::create(['key' => 'guarded', 'challenge' => 'turnstile']);
+        Http::fake([self::VERIFY_URL => Http::response(self::ACCEPTED)]);
+
+        $this->postJson('/api/forms/open/submissions', ['message' => 'no token needed'])
+            ->assertCreated();
+
+        $this->postJson('/api/forms/guarded/submissions', ['message' => 'no token'])
+            ->assertStatus(422);
+
+        $this->postJson('/api/forms/guarded/submissions', [
+            'message' => 'token supplied',
+            'cf_turnstile_response' => 'a-token-from-the-widget',
+        ])->assertCreated();
     }
 }
