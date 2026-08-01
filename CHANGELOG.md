@@ -1,10 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0] - 2026-08-01
 - Optional human-verification challenge on public submissions, off unless configured
 - Cloudflare Turnstile ships as the first challenge provider; others plug in behind a challenge contract
 - A challenge provider that cannot be reached answers 503 rather than rejecting the submitter
 - The challenge token is verified and discarded instead of being stored with the submission
+- The origin allowlist is settable for every form through config, not only per form row
 
 ## [0.1.0] - 2026-07-23
 - Polymorphic form collection: a Form definition and its submissions, each scoped to any owning model via an owner morph
