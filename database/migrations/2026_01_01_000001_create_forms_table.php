@@ -14,6 +14,7 @@ return new class () extends Migration {
             $table->string('recipient_email')->nullable();
             $table->json('destinations')->nullable();
             $table->json('allowed_origins')->nullable();
+            $table->json('challenge')->nullable();
             $table->boolean('is_active')->default(true);
             $table->json('meta')->nullable();
             $table->nullableMorphs('owner');

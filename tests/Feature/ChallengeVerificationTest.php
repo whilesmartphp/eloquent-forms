@@ -137,7 +137,7 @@ class ChallengeVerificationTest extends TestCase
     #[Test]
     public function a_form_can_opt_out_of_the_configured_challenge(): void
     {
-        Form::create(['key' => 'mobile-intake', 'challenge' => Form::CHALLENGE_NONE]);
+        Form::create(['key' => 'mobile-intake', 'challenge' => ['driver' => null]]);
         Http::fake();
 
         $this->postJson('/api/forms/mobile-intake/submissions', [
@@ -150,7 +150,7 @@ class ChallengeVerificationTest extends TestCase
     #[Test]
     public function opting_one_form_out_leaves_the_others_challenged(): void
     {
-        Form::create(['key' => 'mobile-intake', 'challenge' => Form::CHALLENGE_NONE]);
+        Form::create(['key' => 'mobile-intake', 'challenge' => ['driver' => null]]);
         Http::fake([self::VERIFY_URL => Http::response(self::ACCEPTED)]);
 
         $this->postJson('/api/forms/mobile-intake/submissions', ['message' => 'no token'])
@@ -164,7 +164,7 @@ class ChallengeVerificationTest extends TestCase
     public function a_form_can_require_a_challenge_the_default_does_not(): void
     {
         config()->set('eloquent-forms.protection.challenge', null);
-        Form::create(['key' => 'guarded', 'challenge' => 'turnstile']);
+        Form::create(['key' => 'guarded', 'challenge' => ['driver' => 'turnstile']]);
         Http::fake([self::VERIFY_URL => Http::response(self::ACCEPTED)]);
 
         $this->postJson('/api/forms/open/submissions', ['message' => 'no token needed'])
@@ -177,5 +177,37 @@ class ChallengeVerificationTest extends TestCase
             'message' => 'token supplied',
             'cf_turnstile_response' => 'a-token-from-the-widget',
         ])->assertCreated();
+    }
+
+    #[Test]
+    public function driver_options_are_carried_from_the_form(): void
+    {
+        Form::create([
+            'key' => 'pinned',
+            'challenge' => ['driver' => 'turnstile', 'options' => ['hostname' => 'example.com']],
+        ]);
+        Http::fake([self::VERIFY_URL => Http::response(self::ACCEPTED)]);
+
+        $this->postJson('/api/forms/pinned/submissions', [
+            'message' => 'solved on the expected host',
+            'cf_turnstile_response' => 'a-token-from-the-widget',
+        ])->assertCreated();
+    }
+
+    #[Test]
+    public function a_token_solved_for_another_hostname_is_refused(): void
+    {
+        Form::create([
+            'key' => 'pinned',
+            'challenge' => ['driver' => 'turnstile', 'options' => ['hostname' => 'whilesmart.com']],
+        ]);
+        Http::fake([self::VERIFY_URL => Http::response(self::ACCEPTED)]);
+
+        $this->postJson('/api/forms/pinned/submissions', [
+            'message' => 'token minted elsewhere',
+            'cf_turnstile_response' => 'a-token-from-the-widget',
+        ])->assertStatus(422);
+
+        $this->assertSame(0, FormSubmission::count());
     }
 }

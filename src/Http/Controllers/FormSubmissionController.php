@@ -36,7 +36,7 @@ class FormSubmissionController extends Controller
         $verifier = $challenges->verifier($form->challengeKey());
 
         if ($verifier !== null) {
-            $failure = $this->challengeFailure($request, $verifier);
+            $failure = $this->challengeFailure($request, $verifier, $form->challengeOptions());
 
             if ($failure !== null) {
                 return $failure;
@@ -78,15 +78,21 @@ class FormSubmissionController extends Controller
      * Null when the challenge was solved. A provider that cannot be reached
      * throws instead, answering 503 rather than blaming the submitter.
      */
-    private function challengeFailure(SubmitFormRequest $request, ChallengeVerifier $verifier): ?JsonResponse
-    {
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function challengeFailure(
+        SubmitFormRequest $request,
+        ChallengeVerifier $verifier,
+        array $options,
+    ): ?JsonResponse {
         $token = (string) $request->input($verifier->tokenField(), '');
 
         if ($token === '') {
             return $this->failure('Please complete the verification challenge.', 422);
         }
 
-        if (! $verifier->verify($token, $request->ip())) {
+        if (! $verifier->verify($token, $request->ip(), $options)) {
             return $this->failure('Verification failed. Please try again.', 422);
         }
 

@@ -23,7 +23,14 @@ class TurnstileVerifier implements ChallengeVerifier
         return config('eloquent-forms.turnstile.token_field', 'cf_turnstile_response');
     }
 
-    public function verify(string $token, ?string $ipAddress = null): bool
+    /**
+     * Recognised options: `hostname`, asserted against the hostname Cloudflare
+     * reports for the token so a token minted on one site cannot be replayed
+     * against another.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    public function verify(string $token, ?string $ipAddress = null, array $options = []): bool
     {
         $secret = config('eloquent-forms.turnstile.secret');
 
@@ -49,15 +56,27 @@ class TurnstileVerifier implements ChallengeVerifier
             );
         }
 
-        if ($response->json('success') === true) {
-            return true;
+        if ($response->json('success') !== true) {
+            Log::info('Turnstile rejected a submission.', [
+                'errors' => $response->json('error-codes', []),
+                'ip' => $ipAddress,
+            ]);
+
+            return false;
         }
 
-        Log::info('Turnstile rejected a submission.', [
-            'errors' => $response->json('error-codes', []),
-            'ip' => $ipAddress,
-        ]);
+        $expectedHostname = $options['hostname'] ?? null;
 
-        return false;
+        if (filled($expectedHostname) && $response->json('hostname') !== $expectedHostname) {
+            Log::info('Turnstile token was solved for a different hostname.', [
+                'expected' => $expectedHostname,
+                'actual' => $response->json('hostname'),
+                'ip' => $ipAddress,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 }

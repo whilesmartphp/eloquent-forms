@@ -14,5 +14,8 @@ interface ChallengeVerifier
      */
     public function tokenField(): string;
 
-    public function verify(string $token, ?string $ipAddress = null): bool;
+    /**
+     * @param  array<string, mixed>  $options  Driver-defined settings for this form.
+     */
+    public function verify(string $token, ?string $ipAddress = null, array $options = []): bool;
 }

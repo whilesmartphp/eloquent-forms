@@ -55,15 +55,30 @@ Leaving `FORMS_CHALLENGE` unset runs no challenge and makes no outbound call.
 
 Only a browser can render the widget and produce a token, so a challenge set in
 config would otherwise lock out mobile and server-to-server clients posting to
-the same API. Set the `challenge` column on those forms to `none`:
+the same API. The `challenge` column decides this per form:
+
+| Stored value | Effect |
+| :-- | :----- |
+| `null` | inherit the configured default |
+| `['driver' => null]` | run no challenge on this form |
+| `['driver' => 'turnstile']` | name a driver |
+| `['driver' => 'turnstile', 'options' => [...]]` | and pass it settings |
 
 ```php
-Form::create(['key' => 'mobile-intake', 'challenge' => Form::CHALLENGE_NONE]);
+Form::create(['key' => 'mobile-intake', 'challenge' => ['driver' => null]]);
 ```
 
-The column follows the same rule as `destinations` and `allowed_origins`: the
-form's own value wins, null inherits the config default. A form can also require
-a challenge the default does not, by naming one.
+A present `driver` entry always wins, including a null one. Anything else falls
+through to the default, so the column follows the same rule as `destinations`
+and `allowed_origins`.
+
+`options` belongs to the driver and nothing else interprets it. Turnstile reads
+`hostname`, checking it against the host Cloudflare reports for the token so one
+minted on another site cannot be replayed:
+
+```php
+'challenge' => ['driver' => 'turnstile', 'options' => ['hostname' => 'whilesmart.com']],
+```
 
 Forms are created on first use, so a key that has never been submitted inherits
 the config default and is challenged. Create the row ahead of the first call for

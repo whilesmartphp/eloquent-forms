@@ -18,18 +18,12 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string|null $recipient_email
  * @property array|null $destinations
  * @property array|null $allowed_origins
- * @property string|null $challenge
+ * @property array<string, mixed>|null $challenge
  * @property bool $is_active
  * @property array|null $meta
  */
 class Form extends Model
 {
-    /**
-     * Reserved `challenge` value meaning "run no challenge on this form",
-     * as distinct from null, which inherits the configured default.
-     */
-    public const CHALLENGE_NONE = 'none';
-
     protected $fillable = [
         'key',
         'name',
@@ -46,6 +40,7 @@ class Form extends Model
         return [
             'destinations' => 'array',
             'allowed_origins' => 'array',
+            'challenge' => 'array',
             'is_active' => 'boolean',
             'meta' => 'array',
         ];
@@ -62,19 +57,47 @@ class Form extends Model
     }
 
     /**
-     * Effective challenge key for this form: the form's own when set, otherwise
-     * the package default. The reserved value `none` opts a form out entirely,
-     * which is what a form submitted by a non-browser client needs.
+     * Effective challenge driver for this form, or null to run none.
+     *
+     * The stored document names a driver and, optionally, settings for it:
+     *
+     *   null                                        inherit the configured default
+     *   ['driver' => null]                          run no challenge on this form
+     *   ['driver' => 'turnstile']                   name a driver
+     *   ['driver' => 'turnstile', 'options' => []]  and pass it settings
+     *
+     * A present `driver` entry always wins, including a null one, which is how
+     * a form submitted by a non-browser client opts out of an install-wide
+     * default. Anything else falls through to that default.
      */
     public function challengeKey(): ?string
     {
-        $key = $this->challenge ?: config('eloquent-forms.protection.challenge');
+        $config = $this->challenge;
 
-        if (blank($key) || $key === self::CHALLENGE_NONE) {
-            return null;
+        if (is_array($config) && array_key_exists('driver', $config)) {
+            return blank($config['driver']) ? null : (string) $config['driver'];
         }
 
-        return $key;
+        $default = config('eloquent-forms.protection.challenge');
+
+        return blank($default) ? null : (string) $default;
+    }
+
+    /**
+     * Settings handed to this form's challenge driver. Their meaning belongs to
+     * the driver, so nothing here interprets them.
+     *
+     * @return array<string, mixed>
+     */
+    public function challengeOptions(): array
+    {
+        $config = $this->challenge;
+
+        if (! is_array($config) || ! isset($config['options']) || ! is_array($config['options'])) {
+            return [];
+        }
+
+        return $config['options'];
     }
 
     /**
