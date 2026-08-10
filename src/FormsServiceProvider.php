@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Whilesmart\Forms\Challenges\ChallengeManager;
 use Whilesmart\Forms\Destinations\DestinationManager;
 use Whilesmart\Forms\Interfaces\ResponseFormatterInterface;
 
@@ -28,6 +29,11 @@ class FormsServiceProvider extends ServiceProvider
         $this->app->singleton(
             DestinationManager::class,
             fn ($app) => new DestinationManager($app)
+        );
+
+        $this->app->singleton(
+            ChallengeManager::class,
+            fn ($app) => new ChallengeManager($app)
         );
     }
 
