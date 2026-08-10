@@ -2,8 +2,11 @@
 
 namespace Whilesmart\Forms\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use Whilesmart\Forms\Challenges\ChallengeManager;
+use Whilesmart\Forms\Contracts\ChallengeVerifier;
 use Whilesmart\Forms\Events\FormSubmittedEvent;
 use Whilesmart\Forms\Http\Requests\SubmitFormRequest;
 use Whilesmart\Forms\Jobs\ProcessFormSubmission;
@@ -15,7 +18,7 @@ class FormSubmissionController extends Controller
 {
     use ApiResponse;
 
-    public function store(SubmitFormRequest $request, string $key)
+    public function store(SubmitFormRequest $request, ChallengeManager $challenges, string $key)
     {
         $form = Form::firstOrCreate(
             ['key' => $key],
@@ -30,7 +33,20 @@ class FormSubmissionController extends Controller
             return $this->failure('Origin not allowed.', 403);
         }
 
-        $payload = $request->except(['_started_at']);
+        $verifier = $challenges->verifier($form->challengeKey());
+
+        if ($verifier !== null) {
+            $failure = $this->challengeFailure($request, $verifier, $form->challengeOptions());
+
+            if ($failure !== null) {
+                return $failure;
+            }
+        }
+
+        $payload = $request->except(array_filter([
+            '_started_at',
+            $verifier?->tokenField(),
+        ]));
 
         $submission = new FormSubmission([
             'form_id' => $form->id,
@@ -56,6 +72,31 @@ class FormSubmissionController extends Controller
             'Thanks. Your message has been received.',
             201,
         );
+    }
+
+    /**
+     * Null when the challenge was solved. A provider that cannot be reached
+     * throws instead, answering 503 rather than blaming the submitter.
+     */
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function challengeFailure(
+        SubmitFormRequest $request,
+        ChallengeVerifier $verifier,
+        array $options,
+    ): ?JsonResponse {
+        $token = (string) $request->input($verifier->tokenField(), '');
+
+        if ($token === '') {
+            return $this->failure('Please complete the verification challenge.', 422);
+        }
+
+        if (! $verifier->verify($token, $request->ip(), $options)) {
+            return $this->failure('Verification failed. Please try again.', 422);
+        }
+
+        return null;
     }
 
     private function originAllowed(SubmitFormRequest $request, Form $form): bool

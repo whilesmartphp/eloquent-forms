@@ -10,6 +10,15 @@ return [
     'route_prefix' => env('FORMS_ROUTE_PREFIX', 'api'),
 
     /*
+    | Hosts permitted to submit, comma-separated. Empty allows any origin. A
+    | Form row may narrow this further via its `allowed_origins` column.
+    */
+    'allowed_origins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('FORMS_ALLOWED_ORIGINS', ''))
+    ))),
+
+    /*
     | Response envelope used by the package controllers. Swap for your own
     | implementation of ResponseFormatterInterface to change the shape.
     */
@@ -34,6 +43,26 @@ return [
         'rate_limit_per_minute' => env('FORMS_RATE_LIMIT', 10),
         // Max characters accepted for any single freeform value.
         'max_value_length' => 5000,
+        // Human-verification challenge, resolved through `challenge_drivers`.
+        // Null runs no challenge; the honeypot and time trap still apply.
+        'challenge' => env('FORMS_CHALLENGE'),
+    ],
+
+    /*
+    | Challenge driver map. Each key resolves to a class implementing
+    | Whilesmart\Forms\Contracts\ChallengeVerifier. Add your own provider here
+    | and every form gains it.
+    */
+    'challenge_drivers' => [
+        'turnstile' => \Whilesmart\Forms\Challenges\TurnstileVerifier::class,
+    ],
+
+    'turnstile' => [
+        // Only the secret belongs here. The site key is public and is baked
+        // into the frontend bundle that renders the widget.
+        'secret' => env('TURNSTILE_SECRET_KEY'),
+        'token_field' => env('TURNSTILE_TOKEN_FIELD', 'cf_turnstile_response'),
+        'timeout' => env('TURNSTILE_TIMEOUT', 5),
     ],
 
     /*
